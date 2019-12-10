@@ -1,0 +1,476 @@
+openapi: 3.0.0
+info:
+  description: "API for inspection backend"
+  version: "1.0.0"
+  title: "Inspection API"
+tags:
+- name: "auth"
+- name: "inspector"
+  description: "endpoints for inspector"
+- name: "operator"
+  description: "endpoints for operator"
+- name: "chief"
+  description: "endpoints for chief"
+- name: "admin"
+  description: ""
+paths:
+  /login:
+    post:
+      tags:
+      - "auth"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Login"
+      responses:
+        401:
+          description: "Unauthorized"
+  /dailyRoute:
+    get:
+      tags:
+      - "inspector"
+      summary: "Retrieve daily route information"
+      parameters:
+      - in: "header"
+        name: "token"
+        required: true
+        schema:
+          type: "string"
+      responses:
+        200:
+          description: "Daily route"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyRoute"
+        401:
+          description: "Unauthorized"
+        403:
+          description: "Forbidden"
+    put:
+      tags:
+      - "inspector"
+      summary: "Update covered daily route"
+      parameters:
+      - name: "token"
+        in: "header"
+        required: true
+        schema:
+          type: "string"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              items:
+                $ref: "#/components/schemas/GeoTrack"
+      responses:
+        200:
+          description: "OK [TODO: calculate coverage %]"
+        401:
+          description: "Unauthorized"
+        403:
+          description: "Forbidden"
+  /recognizePlates:
+    post:
+      tags:
+      - "inspector"
+      summary: "Get license plates from a photo"
+      parameters:
+      - name: "token"
+        in: "header"
+        required: true
+        schema:
+          type: "string"
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
+      responses:
+        200:
+          description: "Recognized plates + Vehicle info if any + ASCOP"
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/PlatesWithData"
+        401:
+          description: "Unauthorized"
+  /checkPlates:
+    post:
+      tags:
+      - "inspector"
+      summary: "Check license plates"
+      parameters:
+      - name: "token"
+        in: "header"
+        required: true
+        schema:
+          type: "string"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: "object"
+              properties:
+                licensePlates:
+                  type: "string"
+      responses:
+        200:
+          description: "Vehicle info if any + ASCOP"
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/PlatesWithData"
+        401:
+          description: "Unauthorized"
+  /notice:
+    post:
+      tags:
+      - "inspector"
+      summary: "Add new notice"
+      parameters:
+      - name: "token"
+        in: "header"
+        required: true
+        schema:
+          type: "string"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: "object"
+              properties:
+                noticeDraft:
+                  $ref: "#/components/schemas/NoticeDraft"
+                photos:
+                  type: "array"
+                  items:
+                    type: "string"
+                    format: "binary"
+              required:
+                  - "noticeDraft"
+                  - "photos"
+      responses:
+        200:
+          description: "OK"
+        401:
+          description: "Unauthorized"
+    put:
+      tags:
+      - "inspector"
+      summary: "TODO: update printed, recievedByDriver fields"
+      responses:
+        200:
+          description: "OK"
+  /notices:
+    get:
+      tags:
+      - "operator"
+      - "chief"
+      summary: "Get recenlty created notices where ticketId is null"
+      parameters:
+      - name: "token"
+        in: "header"
+        required: true
+        schema:
+          type: "string"
+      responses:
+        200:
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/Notice"
+        401:
+          description: "Unauthorized"
+  /proceedNotice:
+    post:
+      tags:
+      - "operator"
+      summary: "assigns operator to notice and set it's beeingProceed field"
+      parameters:
+      - name: "token"
+        in: "header"
+        required: true
+        schema:
+          type: "string"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: "object"
+              properties:
+                noticeId:
+                  type: "string"
+      responses:
+        200:
+          description: "OK"
+        403:
+          description: "Forbidden"
+        401:
+          description: "Unauthorized"
+  /convertToTicket:
+    post:
+      tags:
+      - "operator"
+      summary: "creates Ticket instance"
+      parameters:
+      - name: "token"
+        in: "header"
+        required: true
+        schema:
+          type: "string"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: "object"
+              properties:
+                noticeId:
+                  type: "string"
+                owner:
+                  $ref: "#/components/schemas/VehicleOwner"
+      responses:
+        200:
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyRoute"
+        403:
+          description: "Forbidden"
+        401:
+          description: "Unauthorized"
+  /tickets:
+    get:
+      tags:
+      - "operator"
+      - "chief"
+      summary: "Get recenlty created tickets"
+      parameters:
+      - name: "token"
+        in: "header"
+        required: true
+        schema:
+          type: "string"
+      responses:
+        200:
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/Ticket"
+        401:
+          description: "Unauthorized"
+components:
+  schemas:
+    Login:
+      type: "object"
+      properties:
+        login:
+          type: "string"
+          description: "user login"
+        password:
+          type: "string"
+          description: "user password"
+    GeoCoordinates:
+      description: "Geo coordinate"
+      type: "object"
+      properties:
+        lat:
+          type: "integer"
+        lng:
+          type: "integer"
+    GeoTrack:
+      description: "Timed coordinates"
+      type: "object"
+      properties:
+        datetime:
+          type: "string"
+          format: "date-time"
+        coordinate:
+          $ref: "#/components/schemas/GeoCoordinates"
+    DailyRoute:
+      type: "object"
+      properties:
+        length:
+          description: "Length in meters"
+          type: "number"
+        streets:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              name:
+                type: "string"
+                description: "Street to inspect"
+              startNumber:
+                type: "number"
+                description: "Start building number"
+              stopNumber:
+                type: "number"
+                description: "Stop building number"
+        area:
+          type: "array"
+          description: "Geo coordinates to draw area to inspect"
+          items:
+            $ref: "#/components/schemas/GeoCoordinates"
+    ShortVehicleInfo:
+      type: "object"
+      properties:
+        licensePlate:
+          type: "string"
+        make:
+          type: "string"
+        model:
+          type: "string"
+    ShortAscopInfo:
+      type: "object"
+      properties:
+        payed:
+          type: "boolean"
+    PlatesWithData:
+      type: "object"
+      properties:
+        plates:
+          type: "string"
+        vehicleInfo:
+          $ref: "#/components/schemas/ShortVehicleInfo"
+        ascop:
+          $ref: "#/components/schemas/ShortAscopInfo"
+    NoticeDraft:
+      type: "object"
+      properties:
+        vehicleInfo:
+          $ref: "#/components/schemas/ShortVehicleInfo"
+        address:
+          type: "string"
+        violations:
+          type: "array"
+          items:
+            type: "string"
+        amount:
+          type: "number"
+    InspectorInfo:
+      type: "object"
+      properties:
+        firstName:
+          type: "string"
+        lastName:
+          type: "string"
+        phone:
+          type: "string"
+    OperatorInfo:
+      type: "object"
+      properties:
+        firstName:
+          type: "string"
+        lastName:
+          type: "string"
+        phone:
+          type: "string"
+    VehicleOwner:
+      type: "object"
+      properties:
+        firstName:
+          type: "string"
+        lastName:
+          type: "string"
+        mailingAddress:
+          type: "string"
+        IIN:
+          nullable: true
+          type: "string"
+    Notice:
+      type: "object"
+      properties:
+        noticeId:
+          type: "string"
+        inspectorInfo:
+          $ref: "#/components/schemas/InspectorInfo"
+        vehicleInfo:
+          $ref: "#/components/schemas/ShortVehicleInfo"
+        address:
+          type: "string"
+        violations:
+          type: "array"
+          items:
+            type: "string"
+        amount:
+          type: "number"
+        photos:
+          type: "array"
+          items:
+            type: "string"
+        printed:
+          nullable: true
+          type: "string"
+          format: "date-time"
+        recievedByDriver:
+          nullable: true
+          type: "string"
+          format: "date-time"
+        beeingProceed:
+          nullable: true
+          type: "string"
+          format: "date-time"
+        convertedToTicket:
+          nullable: true
+          type: "string"
+          format: "date-time"
+        relatedTicketId:
+          nullable: true
+          type: "string"
+        operatorInfo:
+          $ref: "#/components/schemas/OperatorInfo"
+    Ticket:
+      type: "object"
+      properties:
+        ticketId:
+          type: "string"
+        relatedNoticeId:
+          type: "string"
+        operatorInfo:
+          $ref: "#/components/schemas/OperatorInfo"
+        ownerInfo:
+          $ref: "#/components/schemas/VehicleOwner"
+        printed:
+          type: "string"
+          format: "date-time"
+          nullable: true
+        mailed:
+          type: "string"
+          format: "date-time"
+          nullable: true
+        receivedByOwner:
+          type: "string"
+          format: "date-time"
+          nullable: true
+        payedPartially:
+          type: "string"
+          format: "date-time"
+          nullable: true
+        payedInFull:
+          type: "string"
+          format: "date-time"
+          nullable: true
+        status:
+          type: "string"
+          enum: ["open", "recieved", "payed", "appeal"]
+        
