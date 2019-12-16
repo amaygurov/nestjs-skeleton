@@ -1,6 +1,6 @@
 import { createConnection, Connection } from 'typeorm';
 import { Ticket } from '../app/models/ticket.model';
-import { User } from '../app/user/models/user.model';
+import { User } from '../app/user/schemas/user.schema';
 import { Notice } from '../app/models/notice.model';
 import { Photo } from '../app/models/photo.model';
 

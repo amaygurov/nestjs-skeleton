@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
-import { TerminusModule, TerminusModuleOptions, TypeOrmHealthIndicator } from '@nestjs/terminus';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigService } from 'nestjs-config';
+import { MongooseHealthIndicator, TerminusModule, TerminusModuleOptions } from '@nestjs/terminus';
+import { ConfigModule, ConfigService } from 'nestjs-config';
 import { CommonModule } from './common/common.module';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
+import { MongooseModule } from '@nestjs/mongoose';
 
 const getTerminusOptions = (
-  db: TypeOrmHealthIndicator,
+  db: MongooseHealthIndicator
 ): TerminusModuleOptions => ({
   endpoints: [
     {
@@ -16,27 +16,28 @@ const getTerminusOptions = (
       // All the indicator which will be checked when requesting /health
       healthIndicators: [
         // Set the timeout for a response to 300ms
-        async () => db.pingCheck('database', { timeout: 300 }),
-      ],
-    },
-  ],
+        async () => db.pingCheck('database', { timeout: 300 })
+      ]
+    }
+  ]
 });
 
 @Module({
   imports: [
     CommonModule,
-    TypeOrmModule.forRootAsync({
-      useFactory: async (config: ConfigService) => config.get('database'),
-      inject: [ConfigService],
-    }),
     TerminusModule.forRootAsync({
-      inject: [TypeOrmHealthIndicator],
-      useFactory: db => getTerminusOptions(db),
+      inject: [MongooseHealthIndicator],
+      useFactory: db => getTerminusOptions(db)
+    }),
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: config => config.get('database')
     }),
     UserModule,
     AuthModule
   ],
   controllers: [],
-  providers: [],
+  providers: []
 })
 export class AppModule {}
